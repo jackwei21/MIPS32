@@ -1,0 +1,73 @@
+# The program is designed to completely copy itself into memory, any given copy can generate a new copy
+# Made by Xuan Wei
+# $t0 is address of start of code
+# $t1 is used to load and save machine code
+# $t5 is counter that counts iterations, it is N
+# $t6 is very end of all existing machine code
+# $t7 is end of current code copy
+# $t8 is the length of the codes, 152 bytes
+# $t9 is a temp variable, it is how far the code is from first copy
+.data
+# declearing variables
+Original:	.asciiz	"I am the original!\n"
+Copy:	.asciiz	"I am the copy!\n"
+.text
+main:
+_start:
+	# print out N
+	li $v0, 1
+	move $a0, $t5
+	syscall
+	# start printing text
+	li $v0, 4
+	b loadText
+loadText:
+	# checks which statement to print
+	beq $t5, 0, loadOriginal
+	bge $t5, 0, loadCopy
+loadOriginal:
+	# prints original statement
+	la $a0, Original
+	b secondMain
+loadCopy:
+	# prints copy statement
+	la $a0, Copy
+	b secondMain
+secondMain:
+	# continues from where main break off, print text
+	syscall
+	# figure out where should new copy be stored in working memory
+	li $t8, 152
+	mult $t5, $t8
+	mflo $t9
+	li $t0, 0x00400024
+	# get start and end of current copy
+	add $t0, $t0, $t9
+	add $t7, $t0, $t8
+	move $t6, $t7
+	# start generating new copy
+	b saveValues
+saveValues:
+	# if N reached, exit
+	beq $t5, 2, exit
+	# load each line from current code and save to next code
+	lw $t1, ($t0)
+	sw $t1, ($t6)
+	addi $t0, $t0, 4
+	addi $t6, $t6, 4
+	# all code loaded, go to exit
+	beq $t0, $t7, exit
+	# looping
+	b saveValues
+exit:
+	# increment counter
+	addi $t5, $t5, 1
+	# update pointer that points to end of copy
+	move $t7, $t6
+	# set an exit statement
+	# this exit statement will be overwritten if there are more copies to be made
+	# exits
+	li $t1, 0x3402000a
+	sw $t1, ($t7)
+	li $t1, 0x0000000c
+	sw $t1, 4($t7)
