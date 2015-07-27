@@ -1,0 +1,112 @@
+# $t0 for first int
+# $t1 for second int
+# made by Xuan Wei
+
+.data
+# declearing variables to use later
+promptOne:	.asciiz	"please input a number between 1 and 289: "
+promptTwo:	.asciiz "Please input a number between 1 and 5: "
+newline:	.asciiz "\n"
+
+.text
+main:
+_start:
+	# get the two numbers, store them in $t0 and $t1
+	jal getIntOne
+	jal getIntTwo
+	# print out $t0 before going in recursion
+	li $v0, 1
+	move $a0, $t0
+	syscall
+	li $v0, 4
+	la $a0, newline
+	syscall
+	# if second number is 1, printint out once satisfies requirment 
+	# if first number is smaller than second number, printing once satisfies requirment (remainder)
+	beq $t1, 1, exit
+	blt $t0, $t1, exit
+	# save $t0 into stack first, then save $t1 into stack
+	sw $t0, ($sp)
+	addi $sp, $sp, -4
+	sw $t1, ($sp)
+	add $sp, $sp, -4
+	# call recursion
+	jal calculation
+	# terminate program after recursion finishes
+	j exit
+	
+
+getIntOne:
+	# display prompt
+	li $v0, 4
+	la $a0, promptOne
+	syscall
+	# get input
+	li $v0, 5
+	syscall
+	move $t0, $v0
+	# if input is not from 1 to 289, ask for proper input again
+	bgt $t0, 289, getIntOne
+	blt $t0, 1, getIntOne
+	# return to main
+	jr $ra
+
+getIntTwo:
+	# display prompt
+	li $v0, 4
+	la $a0, promptTwo
+	syscall
+	# get input
+	li $v0, 5
+	syscall
+	move $t1, $v0
+	# if input is not from 1 to 5, ask for proper input again
+	bgt $t1, 5, getIntTwo
+	blt $t1, 1, getIntTwo
+	# return to main
+	jr $ra
+
+calculation:
+	# take out $t1 from stack first, then take out $t0
+	addi $sp, $sp, 4
+	lw $t1, ($sp)
+	addi $sp, $sp, 4
+	lw $t0, ($sp)
+	# save current $ra into stack
+	sw $ra, ($sp)
+	addi $sp, $sp, -4
+	# calculations
+	# print out the quotient, and update $t0
+	div $t0, $t1
+	mflo $t0
+	li $v0, 1
+	move $a0, $t0
+	syscall
+	li $v0, 4
+	la $a0, newline
+	syscall
+	# if $t0 is lesser than $t1 at this point, base case reached, start returning
+	blt $t0, $t1, returning
+	# save $t0 in stack first, then save $t1
+	sw $t0, ($sp)
+	addi $sp, $sp, -4
+	sw $t1, ($sp)
+	addi $sp, $sp, -4
+	# call recursion
+	jal calculation
+	# load out previously stored current $ra for returning to level above
+	# and return to level above
+	addi $sp, $sp, 4
+	lw $ra, ($sp)
+	jr $ra
+
+returning:
+	# base case reached, load cuurent $ra from stack, start returning
+	addi $sp, $sp, 4
+	lw $ra, ($sp)
+	jr $ra
+
+exit:
+	# terminate program
+	li $v0, 10
+	syscall
