@@ -1,0 +1,139 @@
+# $t0 is buffer pointer
+# $t1 is current node pointer
+# $t2 is newline, used to check is input empty string
+# $t3 is the first word of space in buffer, used to check exit condition
+# $t4 is used as counter in sorting
+# $t5 is the length to be sorted of the linked list
+# $t6 is head of the linked list
+# $t7 is next node pointer
+# $t8 and $t9 are used for temporary storage
+
+.data
+promp:	.asciiz	"Please input yout string:\n"
+newline:	.asciiz	"\n"
+
+.text
+main:
+_start:
+	# promp the user to input string
+	li $v0, 4
+	la $a0, promp
+	syscall
+	# call function to get the string
+	jal getString
+	# check is string is empty for exit printing
+	lb $t2, newline
+	lb $t3, ($t0)
+	beq $t2, $t3, sort
+	# call function to make a new node
+	jal newNode
+	# load buffer pointer into new node
+	sw $t0, ($t1)
+	# load next node pointer into new node
+	sw $t7, 4($t1)
+	# update next node pointer with current node pointer
+	# update head
+	# increment the length counter
+	move $t7, $t1
+	move $t6, $t1
+	addi $t5, $t5, 1
+	# looping, back to top
+	j main
+	j _start
+getString:
+	# create 1kb buffer
+	li $v0, 9
+	li $a0, 1024
+	syscall
+	# save buffer address
+	move $t0, $v0
+	# get user input and store it in buffer
+	li $v0, 8
+	move $a0, $t0
+	li $a1, 1024
+	syscall
+	# return to main function
+	jr $ra
+newNode:
+	# create node space, 8 bytes
+	li $v0, 9
+	li $a0, 8
+	syscall
+	# save node address as current node pointer
+	move $t1, $v0
+	# return to main function
+	jr $ra
+sort:
+	# bubble sort
+	# if no node at all or only single unsorted node left, exit to print
+	li $t8, 1
+	ble $t5, $t8, preprint
+	# patch to distinguish $t1 from $t7, it's a structural issue about head node
+	lw $t7, 4($t1) 	
+	# load and compare the first char of current node and next node
+	lw $t0, ($t1)
+	lb $t8, ($t0)
+	lw $t0, ($t7)
+	lb $t9, ($t0)
+	bgt $t8, $t9, swapping
+	# change both current node address and next node address
+	lw $t8, 4($t7)
+	move $t1, $t7
+	move $t7, $t8
+	# increment counter
+	addi $t4, $t4, 1
+	# check whether end of linked list reached
+	# if so, reset and sort n - 1 linked list
+	addi $t8, $t5, -1
+	beq $t4, $t8, resetSorting
+	# loop
+	j sort
+swapping:
+	# swap the address of buffer address in current node and next node
+	lw $t8, ($t1)
+	lw $t9, ($t7)
+	sw $t8, ($t7)
+	sw $t9, ($t1)
+	# change both current node address and next node address
+	lw $t8, 4($t7)
+	move $t1, $t7
+	move $t7, $t8
+	# increment counter
+	addi $t4, $t4, 1
+	# check whether end of linked list reached
+	# if so, reset and sort n - 1 linked list
+	addi $t8, $t5, -1
+	beq $t4, $t8, resetSorting
+	# jump back to sorting
+	j sort
+resetSorting:
+	# set current node to head node, and set next node
+	move $t1, $t6
+	lw $t7, 4($t1)
+	# clear counter
+	li $t4, 0
+	# decrease length to be sorted by 1
+	addi $t5, $t5, -1
+	# jump back to sorting
+	j sort
+preprint:
+	# patch to fix addressing to correctly print first node
+	move $t7, $t1
+	j print
+print:
+	# if next node pointer is 0, exit
+	beq $t7, 0, exit
+	# set current node pointer to next node pointer
+	move $t1, $t7
+	# print node content
+	li $v0, 4
+	lw $a0, ($t1)
+	syscall
+	# update $t7 with newer pointer
+	lw $t7, 4($t1)
+	# loop
+	j print
+exit:
+	# terminates the program
+	li $v0, 10
+	syscall
