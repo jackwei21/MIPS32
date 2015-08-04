@@ -1,0 +1,67 @@
+# $t0 is current buffer address in subroutine
+# $t1 is current buffer address in main
+# $t2 is current node address in subroutine
+# $t3 is current node address in main
+# $t4 is the exit check
+# $t5 is the asciiz
+# $t7 is previous node address
+.data
+prompt:	.asciiz	"Input the node content. \n"
+newline:	.asciiz "\n"
+
+.text
+main:
+_start:
+	# prompt the user to input new string
+	lw $t5, prompt
+	li $v0, 4
+	move $a0, $t5
+	syscall
+	# get string, $t1 is the buffer address
+	# test global/scoping issue later, or ask
+	jal getStr
+	move $t1, $ra
+	# call function to make node
+	jal makeNode
+	move $t3, $ra
+	# load buffer address to node
+	# load previous node address to node
+	sw $t1, ($t3)
+	sw $t7, 4($t3)
+	# overwrite the $t7 with current node address $t3
+	move $t7, $t3
+	# check if str is \n, if so then exit
+	lw $t4, ($t1)
+	lw $t5, newline
+	beq $t4, $t5, exit
+	# jump back to start of loop
+	j main
+	j _start
+
+
+getStr:
+	# assign 50 bytes of memory, save address to $t0
+	li $v0, 9
+	li $a0, 1024
+	syscall
+	move $t0, $v0
+	# get input from user, put it in 50 bytes
+	li $v0, 8
+	move $a0, $t0
+	li $a2, 1024
+	syscall
+	jr $ra
+
+makeNode:
+	# use syscal 9 to make new 8 bytes node to store two pointers
+	# store space in $t2
+	li $v0, 9
+	li $a0, 8
+	syscall
+	move $t2, $v0
+	jr $ra
+
+exit:
+	# user inputed emypt string, exit program
+	li $v0, 10
+	syscall
