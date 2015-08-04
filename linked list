@@ -1,67 +1,74 @@
-# $t0 is current buffer address in subroutine
-# $t1 is current buffer address in main
-# $t2 is current node address in subroutine
-# $t3 is current node address in main
-# $t4 is the exit check
-# $t5 is the asciiz
-# $t7 is previous node address
+# $t0 is buffer pointer
+# $t1 is current node pointer
+# $t2 is newline, used to check is input empty string
+# $t3 is the first word of space in buffer, used to check exit condition
+# $t7 is next node pointer
+
 .data
-prompt:	.asciiz	"Input the node content. \n"
-newline:	.asciiz "\n"
+promp:	.asciiz	"Please input yout string:\n"
+newline:	.asciiz	"\n"
 
 .text
 main:
 _start:
-	# prompt the user to input new string
-	lw $t5, prompt
+	# promp the user to input string
 	li $v0, 4
-	move $a0, $t5
+	la $a0, promp
 	syscall
-	# get string, $t1 is the buffer address
-	# test global/scoping issue later, or ask
-	jal getStr
-	move $t1, $ra
-	# call function to make node
-	jal makeNode
-	move $t3, $ra
-	# load buffer address to node
-	# load previous node address to node
-	sw $t1, ($t3)
-	sw $t7, 4($t3)
-	# overwrite the $t7 with current node address $t3
-	move $t7, $t3
-	# check if str is \n, if so then exit
-	lw $t4, ($t1)
-	lw $t5, newline
-	beq $t4, $t5, exit
-	# jump back to start of loop
+	# call function to get the string
+	jal getString
+	# check is string is empty for exit printing
+	lb $t2, newline
+	lb $t3, ($t0)
+	beq $t2, $t3, print
+	# call function to make a new node
+	jal newNode
+	# load buffer pointer into new node
+	sw $t0, ($t1)
+	# load next node pointer into new node
+	sw $t7, 4($t1)
+	# update next node pointer with current node pointer
+	move $t7, $t1
+	# looping, back to top
 	j main
 	j _start
-
-
-getStr:
-	# assign 50 bytes of memory, save address to $t0
+getString:
+	# create 1kb buffer
 	li $v0, 9
 	li $a0, 1024
 	syscall
+	# save buffer address
 	move $t0, $v0
-	# get input from user, put it in 50 bytes
+	# get user input and store it in buffer
 	li $v0, 8
 	move $a0, $t0
-	li $a2, 1024
+	li $a1, 1024
 	syscall
+	# return to main function
 	jr $ra
-
-makeNode:
-	# use syscal 9 to make new 8 bytes node to store two pointers
-	# store space in $t2
+newNode:
+	# create node space, 8 bytes
 	li $v0, 9
 	li $a0, 8
 	syscall
-	move $t2, $v0
+	# save node address as current node pointer
+	move $t1, $v0
+	# return to main function
 	jr $ra
-
+print:
+	# if next node pointer is 0, exit
+	beq $t7, 0, exit
+	# set current node pointer to next node pointer
+	move $t1, $t7
+	# print node content
+	li $v0, 4
+	lw $a0, ($t1)
+	syscall
+	# update $t7 with newer pointer
+	lw $t7, 4($t1)
+	# loop
+	j print
 exit:
-	# user inputed emypt string, exit program
+	# terminates the program
 	li $v0, 10
 	syscall
